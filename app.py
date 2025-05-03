@@ -3,8 +3,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import joblib
 import numpy as np
-import os
-import traceback
+import os, traceback
 from PIL import Image
 from moviepy.editor import VideoFileClip
 
@@ -13,7 +12,7 @@ from keras.applications.resnet50 import ResNet50, preprocess_input
 from keras.preprocessing import image
 
 app = Flask(__name__)
-CORS(app, origins=["http://localhost:3000"])
+CORS(app)
 
 # Load ML model and feature extractor
 classification_model = joblib.load('classification_visual_only.pkl')
@@ -27,7 +26,6 @@ def extract_video_frames(video_path, interval=5):
         frame = video_clip.get_frame(t)
         frame_image = Image.fromarray(frame)
         frames.append(frame_image)
-    video_clip.close()
     return frames
 
 def extract_visual_features(video_path):
@@ -48,29 +46,18 @@ def extract_visual_features(video_path):
 @app.route('/classify', methods=['POST'])
 def classify_video():
     try:
-        video_file = request.files.get('video')
-        if video_file is None or video_file.filename == '':
-            return jsonify({'error': 'No video file provided'}), 400
-
-        # Get file extension or default to .mp4
-        original_filename = video_file.filename
-        extension = os.path.splitext(original_filename)[1] or ".mp4"
-        temp_path = f"temp_video{extension}"
-
-        # Save the uploaded video
+        video_file = request.files['video']
+        filename = video_file.filename
+        temp_path = f'temp_{filename}'
         video_file.save(temp_path)
 
-        # Extract features and predict
         visual_features = extract_visual_features(temp_path)
         prediction = classification_model.predict([visual_features])[0]
 
-        # Clean up temp file
         os.remove(temp_path)
-
         return jsonify({'prediction': int(prediction)})
-
     except Exception as e:
-        print("Exception occurred:", traceback.format_exc())
+        print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
