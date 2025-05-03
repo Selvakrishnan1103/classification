@@ -12,7 +12,7 @@ from keras.applications.resnet50 import ResNet50, preprocess_input
 from keras.preprocessing import image
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, origins=["http://localhost:3000"])
 
 # Load ML model and feature extractor
 classification_model = joblib.load('classification_visual_only.pkl')
